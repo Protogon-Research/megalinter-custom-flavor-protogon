@@ -1,0 +1,23 @@
+---
+# MegaLinter Custom Flavor configuration
+# If you update it manually, run `npx mega-linter-runner --custom-flavor-setup` to propagate updates.
+label: protogon
+linters:
+  - ACTION_ACTIONLINT
+  - ACTION_ZIZMOR
+  - BASH_EXEC
+  - BASH_SHELLCHECK
+  - BASH_SHFMT
+  - EDITORCONFIG_EDITORCONFIG_CHECKER
+  - HTML_HTMLHINT
+  - JSON_JSONLINT
+  - JSON_PRETTIER
+  - JSON_V8R
+  - MARKDOWN_MARKDOWNLINT
+  - REPOSITORY_CHECKOV
+  - REPOSITORY_GIT_DIFF
+  - REPOSITORY_SECRETLINT
+  - REPOSITORY_TRUFFLEHOG
+  - YAML_PRETTIER
+  - YAML_V8R
+  - YAML_YAMLLINT
