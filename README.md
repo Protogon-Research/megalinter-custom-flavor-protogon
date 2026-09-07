@@ -36,9 +36,9 @@ Follow [MegaLinter installation guide](https://megalinter.io/latest/install-assi
 
 This custom flavor is kept up to date with MegaLinter releases:
 
-1. **Version sync**: The `check-new-megalinter-version` workflow (daily cron + manual dispatch) checks for new MegaLinter releases and creates matching releases in this repository. NOTE: we deliberately do NOT configure the `PAT_TOKEN` secret (see security warning below), so the daily run cannot trigger the builder itself — bump versions by running that workflow manually, or by creating a release by hand.
+1. **Version sync**: The `check-new-megalinter-version` workflow (daily cron + manual dispatch) checks for new MegaLinter releases, creates a matching release in this repository, and dispatches the builder workflow for it. It does this with the job's built-in `GITHUB_TOKEN` (the job has `actions: write`), so no Personal Access Token is needed — see below.
 
-2. **Automated builds**: Each release triggers the `megalinter-custom-flavor-builder` workflow, which:
+2. **Automated builds**: The version-sync workflow dispatches the `megalinter-custom-flavor-builder` workflow for each new release (a release created by hand also triggers it via the `release` event). The builder:
    - Builds a Docker image with only the selected linters
    - Publishes to GitHub Container Registry (ghcr.io)
    - Optionally publishes to Docker Hub (if credentials are configured)
@@ -52,18 +52,11 @@ This custom flavor is kept up to date with MegaLinter releases:
 
 ## Configuration requirements
 
-### Optional: Personal Access Token (use with care)
+### No Personal Access Token
 
-> **Security warning**: Using a Personal Access Token (PAT) is **not recommended**. A leaked or compromised PAT can give attackers broad write access to your repository. If you do not need fully automatic daily version sync, you can skip the PAT entirely and trigger the `check-new-megalinter-version` workflow manually whenever you want to upgrade. **This repo currently skips the PAT on purpose.**
+The upstream custom-flavor template expects a `PAT_TOKEN` secret so the version-sync workflow can dispatch the builder. **This repo deliberately does not configure one**: a leaked or compromised PAT can give attackers broad write access. Instead, the version-sync job grants itself `actions: write` and dispatches the builder with the built-in `GITHUB_TOKEN`, which is scoped to this repository and expires when the job ends.
 
-If automatic daily releases ever become worth the trade-off, configure a `PAT_TOKEN` secret as a **repository-scoped fine-grained token** with:
-
-- **Repository access**: Only select repositories (select this repository)
-- **Repository permissions**:
-  - Contents: Read and write
-  - Actions: Read and write
-
-Rotate the token regularly.
+If you re-run `npx mega-linter-runner --custom-flavor-setup`, it will regenerate the workflow from the template and put the `PAT_TOKEN` fallback back — re-apply the `actions: write` permission afterwards.
 
 ### Optional: Docker Hub publishing
 

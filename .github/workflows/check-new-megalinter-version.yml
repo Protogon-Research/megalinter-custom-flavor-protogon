@@ -20,36 +20,12 @@
 #
 # Required permissions:
 #   - contents: write (to create releases and tags)
+#   - actions: write (to dispatch the builder workflow)
 #
-# Required repository secrets:
-#   - PAT_TOKEN: Personal Access Token with 'contents' and 'actions' permissions
-#     This is required to trigger the builder workflow. Without it, the workflow
-#     will fail and the release will be deleted (to be recreated once the token is set).
-#
-# SECURITY WARNING: Using a PAT comes with risk. Open-source projects have been
-# heavily targeted by supply-chain attacks in recent months, and a leaked or
-# compromised PAT can give attackers broad write access to your repository —
-# better safe than sorry! If you do not need fully automatic daily version
-# sync, you can skip the PAT entirely and trigger this workflow manually
-# (Actions tab → "Check for New MegaLinter Version" → "Run workflow") whenever
-# you want to bump to a new MegaLinter release. Only configure PAT_TOKEN if
-# the daily automation is worth the trade-off, and always scope it to this
-# single repository with the minimum required permissions.
-#
-# To create a Fine-grained PAT (still discouraged unless you need automation):
-#   1. Go to GitHub Settings > Developer settings > Personal access tokens > Fine-grained tokens
-#   2. Click "Generate new token"
-#   3. Give it a descriptive name (e.g., "MegaLinter Auto-Release")
-#   4. Set expiration (e.g., 90 days or 1 year)
-#   5. Under "Repository access", select "Only select repositories"
-#   6. Choose this repository (megalinter-custom-flavor-npm-groovy-lint)
-#   7. Under "Permissions" > "Repository permissions":
-#      - Contents: Read and write
-#      - Actions: Read and write
-#   8. Click "Generate token" and copy the token
-#   9. In your repository, go to Settings > Secrets and variables > Actions
-#   10. Click "New repository secret"
-#   11. Name: PAT_TOKEN, Value: paste your token
+# No Personal Access Token is used. The builder is dispatched with the job's
+# GITHUB_TOKEN, which can create workflow_dispatch events once the job has
+# `actions: write`. The upstream template asks for a PAT_TOKEN secret for this
+# step instead; we deliberately don't configure one (see README).
 # =============================================================
 name: Check for New MegaLinter Version
 
@@ -61,6 +37,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   check-new-version:
@@ -178,9 +155,8 @@ jobs:
       - name: Trigger Custom Flavor Builder Workflow
         if: steps.find-new-version.outputs.new_version_found == 'true'
         env:
-          # Use PAT_TOKEN if available, otherwise fall back to GITHUB_TOKEN
-          # Note: GITHUB_TOKEN doesn't have permission to trigger workflows
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          # GITHUB_TOKEN can dispatch workflows because the job grants `actions: write`
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEW_VERSION: ${{ steps.find-new-version.outputs.new_version }}
         run: |
           echo "Triggering megalinter-custom-flavor-builder workflow..."
@@ -208,30 +184,12 @@ jobs:
             
             if grep -q "Resource not accessible by integration" workflow_trigger.log || grep -q "HTTP 403" workflow_trigger.log; then
               echo "::error::The workflow could not be triggered due to insufficient token permissions."
+              echo "::error::This job dispatches the builder with GITHUB_TOKEN, which needs 'actions: write' in the workflow's permissions block."
               echo "::error::"
-              echo "::error::Deleting the release so it can be recreated once PAT_TOKEN is configured..."
+              echo "::error::Deleting the release so it can be recreated once permissions are fixed..."
               
               # Delete the release and tag that was just created
               gh release delete "$NEW_VERSION" --yes --cleanup-tag 2>&1 || echo "::warning::Could not delete release (it may not exist or already be deleted)"
-              
-              echo "::error::"
-              echo "::error::⚠️ PAT_TOKEN is REQUIRED to create releases and trigger the builder workflow."
-              echo "::error::"
-              echo "::error::To fix this, create a Fine-grained Personal Access Token (recommended - more secure):"
-              echo "::error::1. Go to: https://github.com/settings/personal-access-tokens/new"
-              echo "::error::2. Token name: 'MegaLinter Auto-Release'"
-              echo "::error::3. Expiration: Choose 90 days or 1 year"
-              echo "::error::4. Repository access: Select 'Only select repositories'"
-              echo "::error::5. Choose repository: ${GITHUB_REPOSITORY}"
-              echo "::error::6. Repository permissions:"
-              echo "::error::   - Contents: Read and write"
-              echo "::error::   - Actions: Read and write"
-              echo "::error::7. Click 'Generate token' and copy it"
-              echo "::error::8. Go to: https://github.com/${GITHUB_REPOSITORY}/settings/secrets/actions"
-              echo "::error::9. Click 'New repository secret'"
-              echo "::error::10. Name: 'PAT_TOKEN', Value: paste your token"
-              echo "::error::"
-              echo "::error::Once configured, run this workflow again (manually or wait for the next scheduled run)."
             fi
             
             exit 1
