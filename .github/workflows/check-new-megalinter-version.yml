@@ -2,12 +2,16 @@
 # =============================================================
 # Check for New MegaLinter Version Workflow
 #
-# This workflow checks daily for new versions of the MegaLinter
-# custom-builder action and creates a release if a new version is found.
+# This workflow checks for new versions of MegaLinter and creates a release
+# (and builds the image) if a new version is found.
 #
 # Usage:
-# - Runs daily at 00:00 UTC via schedule
-# - Can be manually triggered via workflow_dispatch
+# - Manual-only: trigger via workflow_dispatch (Actions tab -> Run workflow)
+#   when you want to move to a new MegaLinter version.
+# - Deliberately not scheduled: a scheduled run would build every upstream
+#   release the night it appears, running the upstream builder action on
+#   upstream's cadence, and nothing consumes the result automatically anyway
+#   (upgrading is still a manual bump of action.yml and the monorepo SHA).
 # - Compares MegaLinter tags with current repository tags
 # - Creates a new release if a new MegaLinter version is detected
 #
@@ -30,9 +34,6 @@
 name: Check for New MegaLinter Version
 
 on:
-  schedule:
-    # Run daily at 00:00 UTC
-    - cron: "0 0 * * *"
   workflow_dispatch:
 
 permissions:

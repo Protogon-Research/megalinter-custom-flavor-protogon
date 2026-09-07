@@ -36,7 +36,7 @@ Follow [MegaLinter installation guide](https://megalinter.io/latest/install-assi
 
 This custom flavor is kept up to date with MegaLinter releases:
 
-1. **Version sync**: The `check-new-megalinter-version` workflow (daily cron + manual dispatch) checks for new MegaLinter releases, creates a matching release in this repository, and dispatches the builder workflow for it. It does this with the job's built-in `GITHUB_TOKEN` (the job has `actions: write`), so no Personal Access Token is needed — see below.
+1. **Version sync**: The `check-new-megalinter-version` workflow (manual dispatch only) checks for new MegaLinter releases, creates a matching release in this repository, and dispatches the builder workflow for it. It does this with the job's built-in `GITHUB_TOKEN` (the job has `actions: write`), so no Personal Access Token is needed — see below. It is deliberately not scheduled: a scheduled run would build every upstream release the night it appears, executing the upstream builder action on upstream's cadence rather than ours, and nothing consumes the new image automatically anyway — upgrading is still the manual bump in step 4.
 
 2. **Automated builds**: The version-sync workflow dispatches the `megalinter-custom-flavor-builder` workflow for each new release (a release created by hand also triggers it via the `release` event). The builder:
    - Builds a Docker image with only the selected linters
@@ -56,7 +56,7 @@ This custom flavor is kept up to date with MegaLinter releases:
 
 The upstream custom-flavor template expects a `PAT_TOKEN` secret so the version-sync workflow can dispatch the builder. **This repo deliberately does not configure one**: a leaked or compromised PAT can give attackers broad write access. Instead, the version-sync job grants itself `actions: write` and dispatches the builder with the built-in `GITHUB_TOKEN`, which is scoped to this repository and expires when the job ends.
 
-If you re-run `npx mega-linter-runner --custom-flavor-setup`, it will regenerate the workflow from the template and put the `PAT_TOKEN` fallback back — re-apply the `actions: write` permission afterwards.
+If you re-run `npx mega-linter-runner --custom-flavor-setup`, it will regenerate the workflow from the template, putting the `PAT_TOKEN` fallback and the daily `schedule:` trigger back — re-apply the `actions: write` permission and remove the schedule afterwards.
 
 ### Optional: Docker Hub publishing
 
