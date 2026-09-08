@@ -29,8 +29,11 @@ It is built from official MegaLinter images, but is maintained on https://github
 
 Follow [MegaLinter installation guide](https://megalinter.io/latest/install-assisted/), and replace related elements in the workflow.
 
-- **GitHub Action**: On MegaLinter step in `.github/workflows/mega-linter.yml`, define `uses: Protogon-Research/megalinter-custom-flavor-protogon@<sha or tag>` (this action pins a specific image by digest — see `action.yml`)
-- **Docker image**: Replace official MegaLinter image with `ghcr.io/protogon-research/megalinter-custom-flavor-protogon/megalinter-custom-flavor:v9.6.0`
+The product of this repository is the container image. Consume it directly, pinned by digest:
+
+- **GitHub Actions (what the monorepo does)**: in the MegaLinter step, `uses: docker://ghcr.io/protogon-research/megalinter-custom-flavor-protogon/megalinter-custom-flavor@sha256:<digest> # vX.Y.Z`. The runner pulls the image and runs its entrypoint — the same thing the action wrapper below does, minus one hop. See [Looking up an image digest](#looking-up-an-image-digest).
+- **Docker**: `docker run` the same `ghcr.io/…/megalinter-custom-flavor@sha256:<digest>` reference in place of the official MegaLinter image.
+- **Action wrapper (optional)**: `uses: Protogon-Research/megalinter-custom-flavor-protogon@<sha>` also works — `action.yml` is a bare `runs: using: docker` pointing at one digest. Nothing depends on it since the monorepo switched to the direct image reference on 2026-09-08; it is kept current as a courtesy and may lag.
 
 ## How the flavor is generated and updated
 
@@ -44,21 +47,21 @@ This custom flavor is kept up to date with MegaLinter releases:
    - Optionally publishes to Docker Hub (if credentials are configured)
 
 3. **Available image tags**:
-   - Release tags (e.g., `v9.6.0`): Built from MegaLinter releases
+   - Release tags (e.g., `v10.1.0`): Built from MegaLinter releases
    - `beta` tag: Built from non-main branch pushes for testing
    - `latest` tag: Points to the most recent release
 
-4. **After each new image**: replace the image digest (and the version comment) in `action.yml` here — see [Looking up an image digest](#looking-up-an-image-digest) — then bump the SHA reference in the monorepo's `.github/workflows/CI.yml`.
+4. **After each new image**: look up its digest (see [Looking up an image digest](#looking-up-an-image-digest)) and swap the digest and version comment on the `uses: docker://…` line in the monorepo's `.github/workflows/CI.yml`. Update `action.yml` here as well so the optional wrapper stays current.
 
 ## Configuration requirements
 
 ### Looking up an image digest
 
-`action.yml` references the image by digest rather than by tag, so a re-pushed tag cannot change what consumers run. To find the digest of a freshly built tag, read the `Docker-Content-Digest` header from the registry (no login needed, the package is public):
+Consumers reference the image by digest rather than by tag (the monorepo's CI directly, and `action.yml` here), so a re-pushed tag cannot change what they run. To find the digest of a freshly built tag, read the `Docker-Content-Digest` header from the registry (no login needed, the package is public):
 
 ```bash
 IMAGE=protogon-research/megalinter-custom-flavor-protogon/megalinter-custom-flavor
-TAG=v9.6.0
+TAG=v10.1.0
 TOKEN=$(curl -s "https://ghcr.io/token?scope=repository:${IMAGE}:pull" | jq -r .token)
 curl -sI -H "Authorization: Bearer ${TOKEN}" \
   -H "Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json" \
