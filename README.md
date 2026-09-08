@@ -29,7 +29,7 @@ It is built from official MegaLinter images, but is maintained on https://github
 
 Follow [MegaLinter installation guide](https://megalinter.io/latest/install-assisted/), and replace related elements in the workflow.
 
-- **GitHub Action**: On MegaLinter step in `.github/workflows/mega-linter.yml`, define `uses: Protogon-Research/megalinter-custom-flavor-protogon@<sha or tag>` (this action pins a specific image version tag — see `action.yml`)
+- **GitHub Action**: On MegaLinter step in `.github/workflows/mega-linter.yml`, define `uses: Protogon-Research/megalinter-custom-flavor-protogon@<sha or tag>` (this action pins a specific image by digest — see `action.yml`)
 - **Docker image**: Replace official MegaLinter image with `ghcr.io/protogon-research/megalinter-custom-flavor-protogon/megalinter-custom-flavor:v9.6.0`
 
 ## How the flavor is generated and updated
@@ -48,15 +48,30 @@ This custom flavor is kept up to date with MegaLinter releases:
    - `beta` tag: Built from non-main branch pushes for testing
    - `latest` tag: Points to the most recent release
 
-4. **After each new image**: bump the image tag in `action.yml` here, then bump the SHA reference in the monorepo's `.github/workflows/CI.yml`.
+4. **After each new image**: replace the image digest (and the version comment) in `action.yml` here — see [Looking up an image digest](#looking-up-an-image-digest) — then bump the SHA reference in the monorepo's `.github/workflows/CI.yml`.
 
 ## Configuration requirements
+
+### Looking up an image digest
+
+`action.yml` references the image by digest rather than by tag, so a re-pushed tag cannot change what consumers run. To find the digest of a freshly built tag, read the `Docker-Content-Digest` header from the registry (no login needed, the package is public):
+
+```bash
+IMAGE=protogon-research/megalinter-custom-flavor-protogon/megalinter-custom-flavor
+TAG=v9.6.0
+TOKEN=$(curl -s "https://ghcr.io/token?scope=repository:${IMAGE}:pull" | jq -r .token)
+curl -sI -H "Authorization: Bearer ${TOKEN}" \
+  -H "Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json" \
+  "https://ghcr.io/v2/${IMAGE}/manifests/${TAG}" | grep -i docker-content-digest
+```
+
+The same value appears on the `Digest:` line of `docker pull <image>:<tag>`, e.g. in the monorepo CI's "Pull down action image" log group.
 
 ### No Personal Access Token
 
 The upstream custom-flavor template expects a `PAT_TOKEN` secret so the version-sync workflow can dispatch the builder. **This repo deliberately does not configure one**: a leaked or compromised PAT can give attackers broad write access. Instead, the version-sync job grants itself `actions: write` and dispatches the builder with the built-in `GITHUB_TOKEN`, which is scoped to this repository and expires when the job ends.
 
-If you re-run `npx mega-linter-runner --custom-flavor-setup`, it will regenerate the workflow from the template, putting the `PAT_TOKEN` fallback and the daily `schedule:` trigger back — re-apply the `actions: write` permission and remove the schedule afterwards.
+If you re-run `npx mega-linter-runner --custom-flavor-setup`, it will regenerate the workflows and `action.yml` from the template: the `PAT_TOKEN` fallback, the daily `schedule:` trigger, the unpinned `@main`/`@vN` action refs, and the `:latest` image tag all come back — re-apply the `actions: write` permission, remove the schedule, and restore the pins afterwards.
 
 ### Optional: Docker Hub publishing
 

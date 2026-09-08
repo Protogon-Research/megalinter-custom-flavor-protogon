@@ -7,10 +7,11 @@ outputs:
     description: "0 if no source file has been updated, 1 if source files has been updated"
 runs:
   using: "docker"
-  # You can manually update the Docker image version here, or use the latest tag.
-  # Pinned to a version tag (not :latest) so consumers pinning this action's SHA
-  # get a reproducible image; bump this when releasing a new MegaLinter version.
-  image: "docker://ghcr.io/protogon-research/megalinter-custom-flavor-protogon/megalinter-custom-flavor:v9.6.0"
+  # Pinned by digest, not by tag, so consumers pinning this action's SHA get an
+  # immutable image: a tag can be re-pushed by anything with packages:write on
+  # this repo, a digest cannot. To upgrade, build the new version, then replace
+  # the digest and the version comment (README: "Looking up an image digest").
+  image: "docker://ghcr.io/protogon-research/megalinter-custom-flavor-protogon/megalinter-custom-flavor@sha256:3ded84e3b3d4f18354066cac86b0fee6da3ad6e17a85559ac8162cbfa5d6a0e0" # v9.6.0
 branding:
   icon: "check"
   color: "green"
