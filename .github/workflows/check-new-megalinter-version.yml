@@ -11,7 +11,7 @@
 # - Deliberately not scheduled: a scheduled run would build every upstream
 #   release the night it appears, running the upstream builder action on
 #   upstream's cadence, and nothing consumes the result automatically anyway
-#   (upgrading is still a manual bump of action.yml and the monorepo SHA).
+#   (upgrading is still a manual digest swap in the monorepo's CI.yml).
 # - Compares MegaLinter tags with current repository tags
 # - Creates a new release if a new MegaLinter version is detected
 #

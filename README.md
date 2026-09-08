@@ -31,9 +31,10 @@ Follow [MegaLinter installation guide](https://megalinter.io/latest/install-assi
 
 The product of this repository is the container image. Consume it directly, pinned by digest:
 
-- **GitHub Actions (what the monorepo does)**: in the MegaLinter step, `uses: docker://ghcr.io/protogon-research/megalinter-custom-flavor-protogon/megalinter-custom-flavor@sha256:<digest> # vX.Y.Z`. The runner pulls the image and runs its entrypoint — the same thing the action wrapper below does, minus one hop. See [Looking up an image digest](#looking-up-an-image-digest).
+- **GitHub Actions (what the monorepo does)**: in the MegaLinter step, `uses: docker://ghcr.io/protogon-research/megalinter-custom-flavor-protogon/megalinter-custom-flavor@sha256:<digest> # vX.Y.Z`. The runner pulls the image and runs its entrypoint. See [Looking up an image digest](#looking-up-an-image-digest).
 - **Docker**: `docker run` the same `ghcr.io/…/megalinter-custom-flavor@sha256:<digest>` reference in place of the official MegaLinter image.
-- **Action wrapper (optional)**: `uses: Protogon-Research/megalinter-custom-flavor-protogon@<sha>` also works — `action.yml` is a bare `runs: using: docker` pointing at one digest. Nothing depends on it since the monorepo switched to the direct image reference on 2026-09-08; it is kept current as a courtesy and may lag.
+
+This repository is deliberately **not** usable as a GitHub Action (`uses: Protogon-Research/megalinter-custom-flavor-protogon@…`): the template's `action.yml` wrapper was removed on 2026-09-08 because it only re-pointed at one image digest and nothing consumed it. Reference the image directly instead.
 
 ## How the flavor is generated and updated
 
@@ -51,13 +52,13 @@ This custom flavor is kept up to date with MegaLinter releases:
    - `beta` tag: Built from non-main branch pushes for testing
    - `latest` tag: Points to the most recent release
 
-4. **After each new image**: look up its digest (see [Looking up an image digest](#looking-up-an-image-digest)) and swap the digest and version comment on the `uses: docker://…` line in the monorepo's `.github/workflows/CI.yml`. Update `action.yml` here as well so the optional wrapper stays current.
+4. **After each new image**: look up its digest (see [Looking up an image digest](#looking-up-an-image-digest)) and swap the digest and version comment on the `uses: docker://…` line in the monorepo's `.github/workflows/CI.yml`.
 
 ## Configuration requirements
 
 ### Looking up an image digest
 
-Consumers reference the image by digest rather than by tag (the monorepo's CI directly, and `action.yml` here), so a re-pushed tag cannot change what they run. To find the digest of a freshly built tag, read the `Docker-Content-Digest` header from the registry (no login needed, the package is public):
+Consumers reference the image by digest rather than by tag, so a re-pushed tag cannot change what they run. To find the digest of a freshly built tag, read the `Docker-Content-Digest` header from the registry (no login needed, the package is public):
 
 ```bash
 IMAGE=protogon-research/megalinter-custom-flavor-protogon/megalinter-custom-flavor
@@ -74,7 +75,7 @@ The same value appears on the `Digest:` line of `docker pull <image>:<tag>`, e.g
 
 The upstream custom-flavor template expects a `PAT_TOKEN` secret so the version-sync workflow can dispatch the builder. **This repo deliberately does not configure one**: a leaked or compromised PAT can give attackers broad write access. Instead, the version-sync job grants itself `actions: write` and dispatches the builder with the built-in `GITHUB_TOKEN`, which is scoped to this repository and expires when the job ends.
 
-If you re-run `npx mega-linter-runner --custom-flavor-setup`, it will regenerate the workflows and `action.yml` from the template: the `PAT_TOKEN` fallback, the daily `schedule:` trigger, the unpinned `@main`/`@vN` action refs, and the `:latest` image tag all come back — re-apply the `actions: write` permission, remove the schedule, and restore the pins afterwards.
+If you re-run `npx mega-linter-runner --custom-flavor-setup`, it will regenerate the workflows from the template and re-create an `action.yml` wrapper: the `PAT_TOKEN` fallback, the daily `schedule:` trigger, and the unpinned `@main`/`@vN` action refs all come back — re-apply the `actions: write` permission, remove the schedule, restore the pins, and delete `action.yml` again afterwards.
 
 ### Optional: Docker Hub publishing
 
